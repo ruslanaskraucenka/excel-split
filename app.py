@@ -9,11 +9,13 @@ uploaded_file = st.file_uploader("Upload Excel file (.xlsx)", type=["xlsx"])
 
 if uploaded_file:
     try:
+        # Load the Excel file
         df = pd.read_excel(uploaded_file)
 
-        # Clean special characters
+        # Clean special characters from all string cells
         df = df.applymap(lambda x: re.sub(r"[&'<]", '', x) if isinstance(x, str) else x)
 
+        # Set chunk size
         chunk_size = 1999
         num_chunks = (len(df) - 1) // (chunk_size - 1) + 1
 
@@ -23,9 +25,11 @@ if uploaded_file:
             start = i * (chunk_size - 1)
             end = start + (chunk_size - 1)
             chunk = df.iloc[start:end]
-            chunk_with_header = pd.concat([df.iloc[:1], chunk])
 
-            # Save to Excel in memory using BytesIO
+            # Create a new DataFrame with the same columns
+            chunk_with_header = pd.DataFrame(chunk, columns=df.columns)
+
+            # Save to Excel in memory
             buffer = BytesIO()
             with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
                 chunk_with_header.to_excel(writer, index=False)
