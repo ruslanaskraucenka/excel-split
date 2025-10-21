@@ -33,7 +33,7 @@ if uploaded_file:
 
             st.download_button(
                 label=f"Download split_part_{i+1}.xlsx",
-                data=buffer,
+                data=buffer.getvalue(),
                 file_name=f"split_part_{i+1}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
