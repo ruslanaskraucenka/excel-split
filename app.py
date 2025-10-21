@@ -9,8 +9,8 @@ uploaded_file = st.file_uploader("Upload Excel file (.xlsx)", type=["xlsx"])
 
 if uploaded_file:
     try:
-        # Load the Excel file
-        df = pd.read_excel(uploaded_file)
+        # Load the Excel file without modifying headers
+        df = pd.read_excel(uploaded_file, dtype=str)
 
         # Clean special characters from all string cells
         df = df.applymap(lambda x: re.sub(r"[&'<]", '', x) if isinstance(x, str) else x)
@@ -26,13 +26,10 @@ if uploaded_file:
             end = start + (chunk_size - 1)
             chunk = df.iloc[start:end]
 
-            # Create a new DataFrame with the same columns
-            chunk_with_header = pd.DataFrame(chunk, columns=df.columns)
-
-            # Save to Excel in memory
+            # Save to Excel in memory using BytesIO
             buffer = BytesIO()
             with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-                chunk_with_header.to_excel(writer, index=False)
+                chunk.to_excel(writer, index=False, header=True)
             buffer.seek(0)
 
             st.download_button(
