@@ -11,14 +11,20 @@ uploaded_file = st.file_uploader("Upload Excel file (.xlsx)", type=["xlsx"])
 
 if uploaded_file:
     try:
-        # Load the Excel file as strings to preserve formatting
-        df = pd.read_excel(uploaded_file, dtype=str)
+        # Load the Excel file as raw data (no header)
+        df_raw = pd.read_excel(uploaded_file, header=None, dtype=str)
 
-        # Clean special characters from all string cells
+        # Extract the first row as the custom header
+        custom_header = df_raw.iloc[[0]].copy()
+
+        # Remaining data to split
+        df = df_raw.iloc[1:].reset_index(drop=True)
+
+        # Clean special characters
         df = df.applymap(lambda x: re.sub(r"[&'<]", '', x) if isinstance(x, str) else x)
 
         chunk_size = 1999
-        num_chunks = (len(df) - 1) // (chunk_size - 1) + 1
+        num_chunks = (len(df)) // (chunk_size - 1) + 1
 
         st.success(f"File loaded. Splitting into {num_chunks} parts...")
 
@@ -27,18 +33,22 @@ if uploaded_file:
             end = start + (chunk_size - 1)
             chunk = df.iloc[start:end]
 
+            # Combine header + chunk
+            combined = pd.concat([custom_header, chunk], ignore_index=True)
+
+            # Save to Excel in memory
             buffer = BytesIO()
             with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-                chunk.to_excel(writer, index=False, header=True)
+                combined.to_excel(writer, index=False, header=False)
             buffer.seek(0)
 
-            # Load workbook and apply left alignment to header row
+            # Load workbook and left-align first row
             wb = load_workbook(buffer)
             ws = wb.active
             for cell in ws[1]:
                 cell.alignment = Alignment(horizontal='left')
 
-            # Save updated workbook back to buffer
+            # Save updated workbook
             buffer = BytesIO()
             wb.save(buffer)
             buffer.seek(0)
