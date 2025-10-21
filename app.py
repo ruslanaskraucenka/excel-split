@@ -5,19 +5,21 @@ from io import BytesIO
 from openpyxl.styles import Alignment
 from openpyxl import load_workbook
 
+# Load fixed header from GitHub
+HEADER_URL = "https://raw.githubusercontent.com/yourusername/excel-split/main/excel%20header.xlsx"
+
 st.title("Excel Splitter & Cleaner")
 
 uploaded_file = st.file_uploader("Upload Excel file (.xlsx)", type=["xlsx"])
 
 if uploaded_file:
     try:
-        # Load the Excel file as raw data (no header)
+        # Load fixed header file (first row only)
+        header_df = pd.read_excel(HEADER_URL, header=None, dtype=str)
+        fixed_header = header_df.iloc[[0]].copy()
+
+        # Load uploaded file (skip header row)
         df_raw = pd.read_excel(uploaded_file, header=None, dtype=str)
-
-        # Extract the first row as the custom header
-        custom_header = df_raw.iloc[[0]].copy()
-
-        # Remaining data to split
         df = df_raw.iloc[1:].reset_index(drop=True)
 
         # Clean special characters
@@ -33,8 +35,8 @@ if uploaded_file:
             end = start + (chunk_size - 1)
             chunk = df.iloc[start:end]
 
-            # Combine header + chunk
-            combined = pd.concat([custom_header, chunk], ignore_index=True)
+            # Combine fixed header + chunk
+            combined = pd.concat([fixed_header, chunk], ignore_index=True)
 
             # Save to Excel in memory
             buffer = BytesIO()
