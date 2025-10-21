@@ -6,7 +6,7 @@ from openpyxl.styles import Alignment
 from openpyxl import load_workbook
 
 # Load fixed header from GitHub
-HEADER_URL = "https://raw.githubusercontent.com/yourusername/excel-split/main/excel%20header.xlsx"
+HEADER_URL = "https://raw.githubusercontent.com/ruslanaskraucenka/excel-split/main/excel%20header.xlsx"
 
 st.title("Excel Splitter & Cleaner")
 
