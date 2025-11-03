@@ -1,27 +1,29 @@
+import streamlit as st
 import pandas as pd
 import os
 
-# Configuration
-input_file = "LTL250002595.xlsx"  # Replace with your actual file path
-output_dir = "split_files"
-max_rows = 1999
+st.title("Excel Splitter: Max 1999 Rows per File")
 
-# Create output directory if it doesn't exist
-os.makedirs(output_dir, exist_ok=True)
+uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx"])
 
-# Load the Excel file
-df = pd.read_excel(input_file, engine="openpyxl")
+if uploaded_file:
+    max_rows = 1999
+    df = pd.read_excel(uploaded_file, engine="openpyxl")
+    num_chunks = (len(df) + max_rows - 1) // max_rows
 
-# Calculate the number of chunks
-num_chunks = (len(df) + max_rows - 1) // max_rows
+    st.success(f"File uploaded successfully! Splitting into {num_chunks} files...")
 
-# Split and save each chunk
-for i in range(num_chunks):
-    start = i * max_rows
-    end = start + max_rows
-    chunk = df.iloc[start:end]
-    output_file = os.path.join(output_dir, f"{os.path.splitext(input_file)[0]}_part_{i+1}.xlsx")
-    chunk.to_excel(output_file, index=False)
-
-print(f"Split into {num_chunks} files in '{output_dir}' directory.")
-``
+    for i in range(num_chunks):
+        start = i * max_rows
+        end = start + max_rows
+        chunk = df.iloc[start:end]
+        output_filename = f"{uploaded_file.name.replace('.xlsx', '')}_part_{i+1}.xlsx"
+        chunk.to_excel(output_filename, index=False)
+        with open(output_filename, "rb") as f:
+            st.download_button(
+                label=f"Download {output_filename}",
+                data=f,
+                file_name=output_filename,
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+        os.remove(output_filename)
