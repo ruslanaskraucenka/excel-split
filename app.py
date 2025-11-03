@@ -12,8 +12,7 @@ HEADER_URL = "https://raw.githubusercontent.com/yourusername/excel-split/main/ex
 
 st.title("Excel Splitter & Cleaner")
 
-@@ -16,7 +16,7 @@
-    try:
+
         # Load fixed header row from GitHub (first row only, no column names)
         header_df = pd.read_excel(HEADER_URL, header=None, dtype=str)
         fixed_header = header_df.iloc[[0]].copy()
@@ -21,7 +20,6 @@ st.title("Excel Splitter & Cleaner")
 
         # Load uploaded file (skip its first row)
         df_raw = pd.read_excel(uploaded_file, header=None, dtype=str)
-@@ -36,13 +36,14 @@
             end = start + (chunk_size - 1)
             chunk = df.iloc[start:end]
 
