@@ -1,63 +1,31 @@
-import streamlit as st
 import pandas as pd
-from openpyxl import Workbook
-from openpyxl.utils.dataframe import dataframe_to_rows
-from openpyxl.utils import get_column_letter
-import io
+import streamlit as st
+import os
 
-st.title("Excel Splitter with Header and Formatting Preservation")
+# Set page title
+st.title("Excel File Splitter")
 
-uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx"])
+# File uploader
+uploaded_file = st.file_uploader("Upload an Excel file", type=["xlsx"])
 
-MAX_ROWS = 1999
+# Process the uploaded file
+if uploaded_file is not None:
+    # Read the Excel file
+    df = pd.read_excel(uploaded_file, engine='openpyxl')
 
-def adjust_column_widths(ws):
-    for col in ws.columns:
-        max_length = 0
-        column = col[0].column_letter
-        for cell in col:
-            try:
-                if cell.value:
-                    max_length = max(max_length, len(str(cell.value)))
-            except:
-                pass
-        adjusted_width = max_length + 2
-        ws.column_dimensions[column].width = adjusted_width
+    # Get the base filename without extension
+    base_filename = os.path.splitext(uploaded_file.name)[0]
 
-if uploaded_file:
-    df = pd.read_excel(uploaded_file, engine="openpyxl")
-    header = df.columns.tolist()
-    num_chunks = (len(df) + MAX_ROWS - 1) // MAX_ROWS
+    # Split the dataframe into chunks of 1999 rows
+    chunk_size = 1999
+    chunks = [df[i:i + chunk_size] for i in range(0, len(df), chunk_size)]
 
-    st.success(f"File uploaded successfully! Splitting into {num_chunks} files...")
+    # Save each chunk as a separate Excel file
+    for idx, chunk in enumerate(chunks, start=1):
+        output_filename = f"{base_filename}_part_{idx}.xlsx"
+        chunk.to_excel(output_filename, index=False, engine='openpyxl')
+        st.success(f"Generated file: {output_filename}")
+        with open(output_filename, "rb") as f:
+            st.download_button(label=f"Download {output_filename}", data=f, file_name=output_filename)
 
-    for i in range(num_chunks):
-        start = i * MAX_ROWS
-        end = start + MAX_ROWS
-        chunk = df.iloc[start:end]
-
-        wb = Workbook()
-        ws = wb.active
-        ws.title = "Sheet1"
-
-        # Write header
-        ws.append(header)
-
-        # Write data rows
-        for row in dataframe_to_rows(chunk, index=False, header=False):
-            ws.append(row)
-
-        # Adjust column widths
-        adjust_column_widths(ws)
-
-        output = io.BytesIO()
-        wb.save(output)
-        output.seek(0)
-
-        filename = f"{uploaded_file.name.replace('.xlsx', '')}_part_{i+1}.xlsx"
-        st.download_button(
-            label=f"Download {filename}",
-            data=output,
-            file_name=filename,
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+    st.info(f"Successfully split into {len(chunks)} files with up to {chunk_size} rows each.")
