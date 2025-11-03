@@ -76,4 +76,3 @@ if uploaded_file:
             file_name=filename,
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-``
