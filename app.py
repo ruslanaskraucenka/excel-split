@@ -1,3 +1,5 @@
+with open("excel_splitter_app.py", "w") as f:
+    f.write('''\
 import pandas as pd
 import streamlit as st
 import os
@@ -29,3 +31,4 @@ if uploaded_file is not None:
             st.download_button(label=f"Download {output_filename}", data=f, file_name=output_filename)
 
     st.info(f"Successfully split into {len(chunks)} files with up to {chunk_size} rows each.")
+''')
