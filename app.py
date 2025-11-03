@@ -1,78 +1,46 @@
-import streamlit as st
-from openpyxl import load_workbook, Workbook
-from openpyxl.utils import get_column_letter
-import io
+import openpyxl
+from openpyxl import Workbook
+import os
 
-st.title("Excel Splitter with Formatting Preservation")
+# Load the original Excel file
+source_file = "LTL250002595.xlsx"
+wb = openpyxl.load_workbook(source_file)
+ws = wb.active
 
-uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx"])
+# Load the header from the copilot-generated file
+copilot_file = "LTL250002595_part_3 (2) copilot.xlsx"
+copilot_wb = openpyxl.load_workbook(copilot_file)
+copilot_ws = copilot_wb.active
 
-MAX_ROWS = 1999
+# Extract header values from the copilot file
+header = [cell.value for cell in copilot_ws[1]]
 
-def copy_sheet_format(source_ws, target_ws):
-    # Copy column widths
-    for col in source_ws.column_dimensions:
-        target_ws.column_dimensions[col].width = source_ws.column_dimensions[col].width
+# Determine the number of rows and chunk size
+max_rows = 1999
+total_rows = ws.max_row - 1  # excluding header
+num_chunks = (total_rows + max_rows - 1) // max_rows
 
-    # Copy row heights
-    for row in source_ws.row_dimensions:
-        target_ws.row_dimensions[row].height = source_ws.row_dimensions[row].height
+# Create output directory
+output_dir = "split_correct_format"
+os.makedirs(output_dir, exist_ok=True)
 
-    # Copy merged cells
-    for merged_cell in source_ws.merged_cells.ranges:
-        target_ws.merge_cells(str(merged_cell))
+# Split and save each chunk
+for i in range(num_chunks):
+    start_row = i * max_rows + 2  # +2 to skip original header
+    end_row = min(start_row + max_rows - 1, ws.max_row)
 
-    # Copy styles and values
-    for row in source_ws.iter_rows():
-        for cell in row:
-            new_cell = target_ws.cell(row=cell.row, column=cell.col_idx, value=cell.value)
-            if cell.has_style:
-                new_cell.font = cell.font
-                new_cell.border = cell.border
-                new_cell.fill = cell.fill
-                new_cell.number_format = cell.number_format
-                new_cell.protection = cell.protection
-                new_cell.alignment = cell.alignment
+    new_wb = Workbook()
+    new_ws = new_wb.active
 
-if uploaded_file:
-    in_mem_file = io.BytesIO(uploaded_file.read())
-    wb = load_workbook(in_mem_file)
-    ws = wb.active
+    # Write header
+    new_ws.append(header)
 
-    total_rows = ws.max_row
-    num_chunks = (total_rows + MAX_ROWS - 1) // MAX_ROWS
+    # Write data rows
+    for row in ws.iter_rows(min_row=start_row, max_row=end_row, values_only=True):
+        new_ws.append(row)
 
-    st.success(f"File uploaded successfully! Splitting into {num_chunks} files...")
+    # Save the chunk
+    output_file = os.path.join(output_dir, f"LTL250002595_part_{i+1}.xlsx")
+    new_wb.save(output_file)
 
-    for i in range(num_chunks):
-        start_row = i * MAX_ROWS + 1
-        end_row = min(start_row + MAX_ROWS - 1, total_rows)
-
-        new_wb = Workbook()
-        new_ws = new_wb.active
-        new_ws.title = ws.title
-
-        copy_sheet_format(ws, new_ws)
-
-        for row in ws.iter_rows(min_row=start_row, max_row=end_row):
-            for cell in row:
-                new_cell = new_ws.cell(row=cell.row - start_row + 1, column=cell.col_idx, value=cell.value)
-                if cell.has_style:
-                    new_cell.font = cell.font
-                    new_cell.border = cell.border
-                    new_cell.fill = cell.fill
-                    new_cell.number_format = cell.number_format
-                    new_cell.protection = cell.protection
-                    new_cell.alignment = cell.alignment
-
-        output = io.BytesIO()
-        new_wb.save(output)
-        output.seek(0)
-
-        filename = f"{uploaded_file.name.replace('.xlsx', '')}_part_{i+1}.xlsx"
-        st.download_button(
-            label=f"Download {filename}",
-            data=output,
-            file_name=filename,
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+print(f"Successfully split into {num_chunks} files in '{output_dir}' directory.")
